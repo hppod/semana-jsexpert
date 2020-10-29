@@ -3,7 +3,7 @@ class VideoComponent {
 
     }
 
-    initializePlayer(){
+    initializePlayer() {
         const player = videojs('vid')
         const ModalDialog = videojs.getComponent('ModalDialog')
         const modal = new ModalDialog(player, {
