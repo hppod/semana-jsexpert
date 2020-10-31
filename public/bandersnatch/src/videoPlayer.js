@@ -1,9 +1,12 @@
 class VideoMediaPlayer {
-    constructor({ manifestJSON, network }) {
+    constructor({ manifestJSON, network, videoComponent }) {
         this.manifestJSON = manifestJSON
         this.network = network
+        this.videoComponent = videoComponent
+
         this.videoElement = null
         this.sourceBuffer = null
+        this.activeItem = {}
         this.selected = {}
         this.videoDuration = 0
     }
@@ -35,7 +38,33 @@ class VideoMediaPlayer {
             const selected = this.selected = this.manifestJSON.intro
             mediaSource.duration = this.videoDuration
             await this.fileDownload(selected.url)
+            setInterval(this.waitForQuestions.bind(this), 200)
         }
+    }
+
+    waitForQuestions() {
+        const currentTime = parseInt(this.videoElement.currentTime)
+        const option = this.selected.at === currentTime
+        if (!option) return
+
+        // evita que o modal seja aberto mais de uma vez no mesmo segundo 
+        if (this.activeItem.url === this.selected.url) return
+        this.videoComponent.configureModal(this.selected.options)
+        this.activeItem = this.selected
+    }
+
+    async nextChunk(data) {
+        const key = data.toLowerCase()
+        const selected = this.manifestJSON[key]
+        this.selected = {
+            ...selected,
+            // ajustar o tempo que o modal vai aparecer baseado no tempo corrente
+            at: parseInt(this.videoElement.currentTime + selected.at)
+        }
+
+        // deixa o restante do video rolar enquanto o novo é baixado
+        this.videoElement.play()
+        await this.fileDownload(selected.url)
     }
 
     async fileDownload(url) {
@@ -54,7 +83,7 @@ class VideoMediaPlayer {
     setVideoPlayerDuration(finalURL) {
         const bars = finalURL.split('/')
         const [name, videoDuration] = bars[bars.length - 1].split('-')
-        this.videoDuration += videoDuration
+        this.videoDuration += parseFloat(videoDuration)
     }
 
     async processBufferSegments(allSegments) {
